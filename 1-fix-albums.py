@@ -10,9 +10,10 @@ import sys
 
 from immichpy.client.generated.models.album_response_dto import AlbumResponseDto
 from immichpy.client.generated.models.asset_response_dto import AssetResponseDto
+from immichpy.client.generated.models.asset_visibility import AssetVisibility
 from immichpy.client.generated.models.bulk_ids_dto import BulkIdsDto
 
-from shared import META_ASSETS, META_PREFIX, SRC_PREFIX, Client
+from shared import META_PREFIX, SRC_PREFIX, Client
 
 
 async def main():
@@ -35,7 +36,7 @@ async def main():
     for album in await client.get_all_albums_cached():
         assets = await client.get_all_assets(album.id)
         for asset in assets:
-            if asset.id in META_ASSETS.values():
+            if asset.visibility == AssetVisibility.HIDDEN or asset.visibility == AssetVisibility.LOCKED:
                 continue
             if asset not in asset_albums:
                 asset_albums[asset] = []

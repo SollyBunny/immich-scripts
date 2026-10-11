@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import atexit
-from async_lru import alru_cache
 import sys
 from typing import Protocol, TypeVar
 from uuid import UUID
 
+from async_lru import alru_cache
 from immichpy import AsyncClient
 from immichpy.client.generated.models.album_response_dto import AlbumResponseDto
 from immichpy.client.generated.models.asset_response_dto import AssetResponseDto
@@ -48,13 +48,10 @@ for key in required_env:
     if key not in env:
         sys.exit(f"Missing {required_env} in .env")
 
-META_ASSETS: dict[str, UUID] = {
-    "SUS_THUMBNAIL": UUID(env["SUS_THUMBNAIL_UUID"]),
-}
-
 SRC_PREFIX = "src: "
 SUS_PREFIX = "sus: "
 META_PREFIX = "meta: "
+
 
 class Client(AsyncClient):
     @classmethod
