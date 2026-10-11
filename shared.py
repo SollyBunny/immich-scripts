@@ -2,19 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+from async_lru import alru_cache
 import sys
-from typing import Final, Protocol, TypeVar
+from typing import Protocol, TypeVar
 from uuid import UUID
 
 from immichpy import AsyncClient
 from immichpy.client.generated.models.album_response_dto import AlbumResponseDto
 from immichpy.client.generated.models.asset_response_dto import AssetResponseDto
 from immichpy.client.generated.models.metadata_search_dto import MetadataSearchDto
-
-SOURCE_ALBUMS: Final = ("Screenshots", "Whatsapp", "Signal", "Discord", "Unsorted")
-META_ASSETS: Final = [
-    UUID("8987ead8-6a56-4694-9d8c-007846e39505"),
-]
 
 
 class HasIdUUID(Protocol):
@@ -47,11 +43,18 @@ def readEnv():
 
 
 env = readEnv()
-if "IMMICH_API_KEY" not in env:
-    sys.exit("Missing IMMICH_API_KEY in .env")
-if "IMMICH_URL" not in env:
-    sys.exit("Missing IMMICH_URL in .env")
+required_env = ["IMMICH_API_KEY", "IMMICH_URL", "SUS_THUMBNAIL_UUID"]
+for key in required_env:
+    if key not in env:
+        sys.exit(f"Missing {required_env} in .env")
 
+META_ASSETS: dict[str, UUID] = {
+    "SUS_THUMBNAIL": UUID(env["SUS_THUMBNAIL_UUID"]),
+}
+
+SRC_PREFIX = "src: "
+SUS_PREFIX = "sus: "
+META_PREFIX = "meta: "
 
 class Client(AsyncClient):
     @classmethod
@@ -67,6 +70,18 @@ class Client(AsyncClient):
         _ = atexit.register(lambda: asyncio.run(client.close()))
         print(f"Connected to client {info.build_image}")
         return client
+
+    @alru_cache()
+    async def get_all_albums_cached(self):
+        return await self.albums.get_all_albums()
+
+    @alru_cache
+    async def get_album(self, name: str):
+        albums = await self.get_all_albums_cached()
+        for album in albums:
+            if album.album_name == name:
+                return album
+        raise ValueError(f"No album found for {name}")
 
     async def get_all_assets(
         self,
