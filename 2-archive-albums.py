@@ -1,0 +1,52 @@
+#!/bin/env .venv/bin/python3
+
+# Make sure all assets in albums are archived
+
+import asyncio
+
+from immichpy.client.generated.models.asset_bulk_update_dto import AssetBulkUpdateDto
+from immichpy.client.generated.models.asset_response_dto import AssetResponseDto
+from immichpy.client.generated.models.asset_visibility import AssetVisibility
+
+from shared import SOURCE_ALBUMS, Client
+
+
+async def main():
+    client = await Client.create()
+
+    albums = await client.albums.get_all_albums()
+    to_archive: list[AssetResponseDto] = []
+    to_unarchive: list[AssetResponseDto] = []
+    for album in albums:
+        assets = await client.get_all_assets(album.id)
+        if album.album_name in SOURCE_ALBUMS:
+            assets = list(filter(lambda a: a.visibility == AssetVisibility.ARCHIVE, assets))
+            print(
+                f"Unarchiving {len(assets)}/{album.asset_count} assets in {album.album_name}"
+            )
+            to_unarchive.extend(assets)
+        else:
+            assets = list(filter(lambda a: a.visibility == AssetVisibility.TIMELINE, assets))
+            print(
+                f"Archiving {len(assets)}/{album.asset_count} assets in {album.album_name}"
+            )
+            to_archive.extend(assets)
+
+    print(f"Archiving {len(to_archive)} assets")
+    await client.assets.update_assets(
+        AssetBulkUpdateDto(
+            ids=[asset.id for asset in to_archive],
+            visibility=AssetVisibility.ARCHIVE,
+        )
+    )
+
+    print(f"Unarchiving {len(to_unarchive)} assets")
+    await client.assets.update_assets(
+        AssetBulkUpdateDto(
+            ids=[asset.id for asset in to_unarchive],
+            visibility=AssetVisibility.TIMELINE,
+        )
+    )
+
+
+asyncio.run(main())
