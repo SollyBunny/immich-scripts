@@ -20,14 +20,14 @@ async def main():
     client = await Client.create()
 
     regex_filters: dict[AlbumResponseDto, re.Pattern[str]] = {}
-    regex_filters[await client.get_album("src: Screenshots")] = re.compile(
-        r"^.*?screen.+?$", re.IGNORECASE
-    )
-    regex_filters[await client.get_album("src: Whatsapp")] = re.compile(
-        r"^\w+?-.+?-WA.+?$"
-    )
-    regex_filters[await client.get_album("src: Signal")] = re.compile(r"^signal-.+?$")
-    regex_filters[await client.get_album("src: Discord")] = re.compile(r"^discord-.+?$")
+    async def add_regex_filter(album_name: str, regex: str, regex_flags: re.RegexFlag = re.NOFLAG):
+        regex_filters[await client.get_album(album_name)] = re.compile(regex, regex_flags)
+
+    # Order matters
+    await add_regex_filter("src: Discord", r"^discord-.+?$")
+    await add_regex_filter("src: Screenshots", r"^.*?screen.+?$", re.IGNORECASE)
+    await add_regex_filter("src: Whatsapp", r"^\w+?-.+?-WA.+?$")
+    await add_regex_filter("src: Signal", r"^signal-.+?$")
     unsorted_album = await client.get_album("src: Unsorted")
 
     asset_albums: dict[AssetResponseDto, list[AlbumResponseDto]] = {}
@@ -64,18 +64,11 @@ async def main():
                 if album.album_name.startswith(SRC_PREFIX):
                     to_remove[album].append(asset)
         else:
-            album_matches = [
-                album
-                for album, regex in regex_filters.items()
-                if re.match(regex, asset.original_file_name)
-            ]
-            if len(album_matches) > 1:
-                print(
-                    f"{asset.id} matched multiple source albums: {', '.join(i.album_name for i in album_matches)}"
-                )
-                was_problem = True
-                continue
-            album_match = album_matches[0] if album_matches else unsorted_album
+            album_match = unsorted_album
+            for album, regex in regex_filters.items():
+                if re.match(regex, asset.original_file_name):
+                    album_match = album
+                    break
             if album_match not in albums:
                 to_add[album_match].append(asset)
             for album in albums:
