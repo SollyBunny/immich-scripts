@@ -60,11 +60,8 @@ class Client(AsyncClient):
             api_key=env["IMMICH_API_KEY"],
             base_url=env["IMMICH_URL"],
         )
-        try:
-            info = await client.server.get_about_info()
-        finally:
-            await client.close()
-        _ = atexit.register(lambda: asyncio.run(client.close()))
+
+        info = await client.server.get_about_info()
         print(f"Connected to client {info.build_image}")
         return client
 

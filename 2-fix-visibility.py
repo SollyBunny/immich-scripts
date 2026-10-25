@@ -14,7 +14,7 @@ from immichpy.client.generated.models.asset_visibility import AssetVisibility
 from shared import SUS_PREFIX, Client
 
 
-async def main():
+async def work(client: Client):
     client = await Client.create()
 
     albums = await client.albums.get_all_albums()
@@ -23,13 +23,17 @@ async def main():
     for album in albums:
         assets = await client.get_all_assets(album.id)
         if album.album_name.startswith(SUS_PREFIX):
-            assets = list(filter(lambda a: a.visibility == AssetVisibility.TIMELINE, assets))
+            assets = list(
+                filter(lambda a: a.visibility == AssetVisibility.TIMELINE, assets)
+            )
             print(
                 f"Archiving {len(assets)}/{album.asset_count} assets in {album.album_name}"
             )
             to_archive.extend(assets)
         else:
-            assets = list(filter(lambda a: a.visibility == AssetVisibility.ARCHIVE, assets))
+            assets = list(
+                filter(lambda a: a.visibility == AssetVisibility.ARCHIVE, assets)
+            )
             print(
                 f"Unarchiving {len(assets)}/{album.asset_count} assets in {album.album_name}"
             )
@@ -50,6 +54,14 @@ async def main():
             visibility=AssetVisibility.TIMELINE,
         )
     )
+
+
+async def main():
+    client = await Client.create()
+    try:
+        await work(client)
+    finally:
+        await client.close()
 
 
 asyncio.run(main())

@@ -16,12 +16,15 @@ from immichpy.client.generated.models.bulk_ids_dto import BulkIdsDto
 from shared import META_PREFIX, SRC_PREFIX, Client
 
 
-async def main():
-    client = await Client.create()
-
+async def work(client: Client):
     regex_filters: dict[AlbumResponseDto, re.Pattern[str]] = {}
-    async def add_regex_filter(album_name: str, regex: str, regex_flags: re.RegexFlag = re.NOFLAG):
-        regex_filters[await client.get_album(album_name)] = re.compile(regex, regex_flags)
+
+    async def add_regex_filter(
+        album_name: str, regex: str, regex_flags: re.RegexFlag = re.NOFLAG
+    ):
+        regex_filters[await client.get_album(album_name)] = re.compile(
+            regex, regex_flags
+        )
 
     # Order matters
     await add_regex_filter("src: Discord", r"^discord-.+?$")
@@ -36,7 +39,10 @@ async def main():
     for album in await client.get_all_albums_cached():
         assets = await client.get_all_assets(album.id)
         for asset in assets:
-            if asset.visibility == AssetVisibility.HIDDEN or asset.visibility == AssetVisibility.LOCKED:
+            if (
+                asset.visibility == AssetVisibility.HIDDEN
+                or asset.visibility == AssetVisibility.LOCKED
+            ):
                 continue
             if asset not in asset_albums:
                 asset_albums[asset] = []
@@ -51,7 +57,10 @@ async def main():
     was_problem = False
     for asset, albums in asset_albums.items():
         non_source_meta_albums = [
-            i.album_name for i in albums if not i.album_name.startswith(SRC_PREFIX) and not i.album_name.startswith(META_PREFIX)
+            i.album_name
+            for i in albums
+            if not i.album_name.startswith(SRC_PREFIX)
+            and not i.album_name.startswith(META_PREFIX)
         ]
         if len(non_source_meta_albums) > 0:
             if len(non_source_meta_albums) > 1:
@@ -93,6 +102,14 @@ async def main():
         _ = await client.albums.remove_asset_from_album(
             album.id, BulkIdsDto(ids=[i.id for i in assets])
         )
+
+
+async def main():
+    client = await Client.create()
+    try:
+        await work(client)
+    finally:
+        await client.close()
 
 
 asyncio.run(main())

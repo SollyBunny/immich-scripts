@@ -105,14 +105,21 @@ async def sync(client: Client, dest: Path, assets: list[AssetResponseDto]) -> No
     print(f"  {downloaded} downloaded, {resized} resized, {removed} removed in {dest}")
 
 
-async def main():
-    client = await Client.create()
+async def work(client: Client):
     for album_name, raw_dest in ALBUM_LINKS.items():
         album = await client.get_album(album_name)
         assets = await client.get_all_assets(album.id)
         dest = Path(raw_dest).expanduser()
         print(f"{album_name} -> {dest} ({len(assets)} assets)")
         await sync(client, dest, assets)
+
+
+async def main():
+    client = await Client.create()
+    try:
+        await work(client)
+    finally:
+        await client.close()
 
 
 asyncio.run(main())

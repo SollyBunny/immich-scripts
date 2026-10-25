@@ -16,9 +16,7 @@ from shared import SUS_PREFIX, Client, env
 SUS_THUMBNAIL_UUID = UUID(env["SUS_THUMBNAIL_UUID"])
 
 
-async def main():
-    client = await Client.create()
-
+async def work(client: Client):
     # Hide the thumbnail
     _ = await client.assets.update_asset(
         id=SUS_THUMBNAIL_UUID,
@@ -41,6 +39,13 @@ async def main():
                 albumThumbnailAssetId=SUS_THUMBNAIL_UUID
             ),
         )
+
+async def main():
+    client = await Client.create()
+    try:
+        await work(client)
+    finally:
+        await client.close()
 
 
 asyncio.run(main())
