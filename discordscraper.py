@@ -26,8 +26,8 @@ import base64
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
-from typing import TypedDict
+from datetime import UTC, datetime
+from typing import TypedDict, cast
 
 import aiohttp
 from immichpy.client.generated.models.bulk_ids_dto import BulkIdsDto
@@ -48,9 +48,7 @@ class AssetItem(TypedDict):
 
 def item_time(item: AssetItem) -> datetime:
     created_at = item.get("createdAt")
-    if created_at is None:
-        return datetime.now(timezone.utc)
-    return datetime.fromtimestamp(created_at / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(created_at / 1000, tz=UTC)
 
 
 def sha1_checksum(data: bytes) -> str:
@@ -68,7 +66,7 @@ async def get_album(client: Client, name: str):
         return await client.get_album(name)
     except ValueError:
         print(f"Creating album {name}")
-        album = await client.albums.create_album(CreateAlbumDto(album_name=name))
+        album = await client.albums.create_album(CreateAlbumDto(albumName=name))
         client.get_all_albums_cached.cache_clear()
         return album
 
@@ -141,7 +139,7 @@ async def main() -> None:
                 continue
 
             try:
-                items = json.loads(line)
+                items = cast(list[AssetItem], json.loads(line))
             except json.JSONDecodeError as error:
                 print(f"Invalid JSON line: {error}", file=sys.stderr)
                 continue
